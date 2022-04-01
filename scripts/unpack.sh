@@ -1,8 +1,9 @@
 #!/bin/bash
 
-LCCRT_DEB="lccrt_0.0-vd6u165_amd64.deb"
-LCCOPT_DEB="liblccopt_0.0-vd6u165_amd64.deb"
-LLVM_DEB="llvm_9.0.1-vd6u51_amd64.deb"
+LCCRT_DEB="lccrt_0.0-vd6u189_amd64.deb"
+LCCOPT_DEB="liblccopt_0.0-vd6u189_amd64.deb"
+LLVM_DEB="llvm_9.0.1-vd6u68_amd64.deb"
+CLANG_DEB="clang_9.0.1-vd6u68_amd64.deb"
 
 if [ "$1" == "" ]; then
 	echo "./unpack.sh <path-to-osl-boot-disk-mountpath>"
@@ -29,13 +30,12 @@ unpack_deb()
 	rm control.tar.gz data.tar.xz debian-binary
 }
 
-cp $REPO/$LCCRT_DEB . || die "Can't find $LCCRT_DEB"
-cp $REPO/$LCCOPT_DEB . || die "Can't find $LCCOPT_DEB"
-cp $REPO/$LLVM_DEB  . || die "Can't find $LLVM_DEB"
+for i in $LCCRT_DEB $LCCOPT_DEB $LLVM_DEB $CLANG_DEB; do
+	cp $REPO/$i . || die "Can't find $i"
 
-unpack_deb $LCCRT_DEB
-unpack_deb $LCCOPT_DEB
-unpack_deb $LLVM_DEB
+	unpack_deb $i
+done
+
 
 echo > list-files.txt
 

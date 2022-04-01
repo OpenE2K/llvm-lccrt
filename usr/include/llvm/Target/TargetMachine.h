@@ -249,6 +249,7 @@ public:
   virtual bool isLccrtAsmtest() const { return Options.LccrtAsmtest; };
   virtual bool isLccrtJit() const { return Options.LccrtJit; };
   virtual bool isLccrtTrace() const { return Options.LccrtTrace; };
+  virtual bool isLccrtCallLong() const { return Options.LccrtCallLong; };
   virtual bool isLccrtBackendDebug() const { return Options.LccrtBackendDebug; };
   virtual std::string& getLccrtBackendOptions() const { return Options.LccrtBackendOptions; }
 

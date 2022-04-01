@@ -108,7 +108,7 @@ namespace llvm {
     TargetOptions()
         : PrintMachineCode(false),
           CodegenLccrt( false), LccrtIpa( false), LccrtAsmtest( false), LccrtJit( false), LccrtTrace( false),
-          LccrtBackendDebug( false), LccrtBackendOptions( ""),
+          LccrtCallLong( false), LccrtBackendDebug( false), LccrtBackendOptions( ""),
           UnsafeFPMath(false), NoInfsFPMath(false),
           NoNaNsFPMath(false), NoTrappingFPMath(false),
           NoSignedZerosFPMath(false),
@@ -143,6 +143,9 @@ namespace llvm {
 
     /// LccrtJit - Use lccrt-tracer for instrumentation.
     unsigned LccrtTrace : 1;
+
+    /// LccrtCallLong - Use only long calls.
+    unsigned LccrtCallLong : 1;
 
     /// LccrtBackendDebug - Use lccrt-backend debug version.
     unsigned LccrtBackendDebug : 1;

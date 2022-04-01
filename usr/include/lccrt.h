@@ -3,7 +3,7 @@
 /**
  * lccrt.h - пользовательский интерфейс (динамической) компиляции.
  *
- * Copyright (c) 1992-2020 AO "MCST". All rights reserved.
+ * Copyright (c) 1992-2021 AO "MCST". All rights reserved.
  *
  * \defgroup lccrt_h
  * @{
@@ -31,7 +31,7 @@ typedef struct lccrt_varinit_r *lccrt_varinit_ptr;
 typedef struct lccrt_type_r *lccrt_type_ptr;
 typedef struct lccrt_oper_r *lccrt_oper_ptr;
 typedef struct lccrt_oper_iterator_r *lccrt_oper_iterator_ptr;
-typedef struct lccrt_module_metadata_r *lccrt_module_metadata_ptr;
+typedef struct lccrt_metadata_struct_descr_r *lccrt_metadata_struct_descr_ptr;
 typedef struct lccrt_metadata_r *lccrt_metadata_ptr;
 typedef struct lccrt_fs_r *lccrt_fs_ptr;
 
@@ -77,7 +77,7 @@ typedef struct
     int8_t is_pic; /* флаг PIC-режима */
     int8_t pie_level; /* только для PIC-режима: 0 - not pie, 1 - small pie, 2 - large pie */
     int8_t is_jit; /* включить режим компиляции */
-    int8_t dbg_lvl; /* уровень отладочной информации в формате dwarf2 */
+    int8_t dbg_level; /* уровень отладочной информации в формате dwarf2 */
     int8_t function_sections; /* включить опцию -ffunction-sections */
     int8_t data_sections; /* включить опцию -fdata-sections */
     int8_t asm_verbose; /* включить опцию -fverbose-asm */
@@ -150,16 +150,6 @@ typedef enum
 } lccrt_hash_key_type_t;
 
 extern int lccrt_exec_with_fork( const char *path, char *argv[], pid_t *wpid, int fds[2]);
-
-/**
- * Таблица виртуальных методов типа метаданных.
- */
-typedef struct
-{
-    void (*delete_module)( lccrt_module_ptr m, uintptr_t value); /* удаление для модуля */
-    void (*delete_func)( lccrt_function_ptr f, uintptr_t value); /* удаление для функции */
-    void (*delete_oper)( lccrt_oper_ptr oper, uintptr_t value); /* удаление для операции */
-} lccrt_module_metadata_table_t;
 
 /**
  * Тип размещения переменной.
@@ -474,9 +464,8 @@ typedef lccrt_var_ptr lccrt_v_ptr;
 typedef lccrt_varinit_ptr lccrt_vi_ptr;
 typedef lccrt_oper_ptr lccrt_o_ptr;
 typedef lccrt_oper_iterator_ptr lccrt_oi_ptr;
-typedef lccrt_module_metadata_ptr lccrt_mmd_ptr;
+typedef lccrt_metadata_struct_descr_ptr lccrt_mdsd_ptr;
 typedef lccrt_metadata_ptr lccrt_md_ptr;
-typedef lccrt_module_metadata_table_t lccrt_mmdt_t;
 
 typedef lccrt_hash_key_type_t lccrt_hkt_t;
 typedef struct lccrt_hash_entry_r *lccrt_hash_entry_ptr;
@@ -486,6 +475,7 @@ typedef lccrt_hash_ptr lccrt_h_ptr;
 
 extern lccrt_h_ptr lccrt_hash_new( lccrt_ctx_ptr ctx, lccrt_hkt_t type);
 extern void lccrt_hash_delete( lccrt_h_ptr ht);
+extern int64_t lccrt_hash_length( lccrt_h_ptr ht);
 extern lccrt_he_ptr lccrt_hash_push( lccrt_h_ptr ht, uintptr_t key, int *is_new);
 extern lccrt_he_ptr lccrt_hash_find( lccrt_h_ptr ht, uintptr_t key);
 extern uintptr_t lccrt_hash_remove( lccrt_he_ptr he);
@@ -545,11 +535,37 @@ extern int lccrt_module_compile_asm( lccrt_m_ptr m, const char *asm_lib,
 extern int lccrt_module_is_jit( lccrt_m_ptr m);
 extern int lccrt_module_is_ptr32( lccrt_module_ptr m);
 extern lccrt_f_ptr lccrt_module_find_function( lccrt_m_ptr m, const char *name);
-extern lccrt_mmd_ptr lccrt_module_new_metadata( lccrt_m_ptr m, const char *name, uintptr_t value,
-                                                lccrt_mmdt_t *meta_tbl);
-extern lccrt_mmd_ptr lccrt_module_find_metadata( lccrt_m_ptr m, const char *name);
-extern uintptr_t lccrt_module_get_metadate_value( lccrt_mmd_ptr meta);
-extern lccrt_mmdt_t *lccrt_module_get_metadate_table( lccrt_mmd_ptr meta);
+extern intptr_t lccrt_module_new_metadata( lccrt_m_ptr m, const char *name, lccrt_mdsd_ptr descr);
+extern intptr_t lccrt_module_find_metadata( lccrt_m_ptr m, const char *name);
+extern lccrt_md_ptr lccrt_module_get_metadata( lccrt_m_ptr m, intptr_t meta);
+extern int lccrt_module_print( lccrt_asm_compile_config_t *acc, lccrt_module_ptr m, int fd);
+extern int lccrt_module_print_stdout( lccrt_asm_compile_config_t *acc, lccrt_module_ptr m);
+extern lccrt_m_ptr lccrt_module_load( lccrt_ctx_ptr ctx, int fd, lccrt_asm_compile_config_t *acc);
+
+extern lccrt_mdsd_ptr lccrt_metadata_new_struct_descr( lccrt_m_ptr m, int num_flds,
+                                                       const char *flds[]);
+extern lccrt_md_ptr lccrt_metadata_init_fld_int( lccrt_md_ptr meta, const char *fld, uint64_t v);
+extern lccrt_md_ptr lccrt_metadata_init_fld_float( lccrt_md_ptr meta, const char *fld, double v);
+extern lccrt_md_ptr lccrt_metadata_init_fld_str( lccrt_md_ptr meta, const char *fld, const char *v);
+extern lccrt_md_ptr lccrt_metadata_init_fld_struct( lccrt_md_ptr meta, const char *fld,
+                                                    lccrt_mdsd_ptr descr);
+extern lccrt_md_ptr lccrt_metadata_init_fld_array( lccrt_md_ptr meta, const char *fld, int num_elems);
+extern lccrt_md_ptr lccrt_metadata_init_elem_int( lccrt_md_ptr meta, int elem, uint64_t v);
+extern lccrt_md_ptr lccrt_metadata_init_elem_float( lccrt_md_ptr meta, int elem, double v);
+extern lccrt_md_ptr lccrt_metadata_init_elem_str( lccrt_md_ptr meta, int elem, const char *v);
+extern lccrt_md_ptr lccrt_metadata_init_elem_struct( lccrt_md_ptr meta, int elem,
+                                                     lccrt_mdsd_ptr descr);
+extern lccrt_md_ptr lccrt_metadata_init_elem_array( lccrt_md_ptr meta, int elem, int num_elems);
+extern uint64_t lccrt_metadata_get_fld_int( lccrt_md_ptr md, const char *fld);
+extern double lccrt_metadata_get_fld_float( lccrt_md_ptr md, const char *fld);
+extern const char *lccrt_metadata_get_fld_str( lccrt_md_ptr md, const char *fld);
+extern lccrt_md_ptr lccrt_metadata_get_fld_struct( lccrt_md_ptr md, const char *fld);
+extern lccrt_md_ptr lccrt_metadata_get_fld_array( lccrt_md_ptr md, const char *fld);
+extern uint64_t lccrt_metadata_get_elem_int( lccrt_md_ptr md, int elem);
+extern double lccrt_metadata_get_elem_float( lccrt_md_ptr md, int elem);
+extern const char *lccrt_metadata_get_elem_str( lccrt_md_ptr md, int elem);
+extern lccrt_md_ptr lccrt_metadata_get_elem_struct( lccrt_md_ptr md, int elem);
+extern lccrt_md_ptr lccrt_metadata_get_elem_array( lccrt_md_ptr md, int elem);
 
 extern lccrt_f_ptr lccrt_function_new( lccrt_m_ptr m, lccrt_t_ptr fsig,
                                        const char *fname, const char *asm_fname,
@@ -594,10 +610,8 @@ extern int lccrt_function_is_declaration( lccrt_f_ptr func);
 extern int lccrt_function_is_builtin( lccrt_f_ptr func);
 extern int lccrt_function_is_used( lccrt_f_ptr func);
 extern int lccrt_function_is_profgen( lccrt_f_ptr func);
-extern void lccrt_function_set_metadata( lccrt_f_ptr func, lccrt_mmd_ptr meta, uintptr_t value);
-extern void lccrt_function_unset_metadata( lccrt_f_ptr func, lccrt_mmd_ptr meta);
-extern uintptr_t lccrt_function_get_metadata_value( lccrt_f_ptr func, lccrt_mmd_ptr meta);
-extern int lccrt_function_has_metadata( lccrt_f_ptr func, lccrt_mmd_ptr meta);
+extern void lccrt_function_set_metadata( lccrt_f_ptr func, intptr_t meta, lccrt_md_ptr value);
+extern lccrt_md_ptr lccrt_function_get_metadata( lccrt_f_ptr func, intptr_t meta);
 
 extern lccrt_v_ptr lccrt_fji_get_profgen_tls( lccrt_fji_ptr fji);
 extern lccrt_v_ptr lccrt_fji_get_jit_entry( lccrt_fji_ptr fji);
@@ -611,6 +625,7 @@ extern uint64_t lccrt_type_get_bytealign( lccrt_t_ptr type);
 extern uint64_t lccrt_type_get_bytesize( lccrt_t_ptr type);
 extern uint64_t lccrt_type_get_byteshift( lccrt_t_ptr type);
 extern uint64_t lccrt_type_get_bitsubshift( lccrt_t_ptr type);
+extern uint64_t lccrt_type_get_bitsubsize( lccrt_t_ptr type);
 extern lccrt_v_ptr lccrt_type_get_vla_size( lccrt_t_ptr type);
 extern int lccrt_type_get_sign( lccrt_t_ptr type);
 extern int lccrt_type_is_void( lccrt_t_ptr type);
@@ -623,7 +638,6 @@ extern int lccrt_type_is_ellipsis( lccrt_t_ptr type);
 extern int lccrt_type_is_field( lccrt_t_ptr type);
 extern int lccrt_type_is_struct( lccrt_t_ptr type);
 extern int lccrt_type_is_union( lccrt_t_ptr type);
-extern int lccrt_type_is_name( lccrt_t_ptr type);
 extern int lccrt_type_is_array( lccrt_t_ptr type);
 extern int lccrt_type_is_vector( lccrt_t_ptr type);
 extern int lccrt_type_is_function( lccrt_t_ptr type);
@@ -702,30 +716,36 @@ extern lccrt_v_ptr lccrt_var_new_constarg( lccrt_m_ptr m, lccrt_t_ptr type, lccr
 extern lccrt_v_ptr lccrt_var_new_constarg_hex( lccrt_m_ptr m, lccrt_t_ptr type, uint64_t value);
 extern lccrt_v_ptr lccrt_var_new_constarg_str( lccrt_m_ptr m, uint64_t s_len, const char *s);
 
-extern lccrt_t_ptr lccrt_var_expand_array( lccrt_v_ptr var, lccrt_t_ptr type);
-extern lccrt_t_ptr lccrt_var_get_type( lccrt_v_ptr var);
-extern uint64_t lccrt_var_get_bytesize( lccrt_v_ptr var);
 extern const char *lccrt_var_get_comdat( lccrt_v_ptr var);
-extern void lccrt_var_set_comdat( lccrt_v_ptr var, const char *comdat);
-extern lccrt_link_t lccrt_var_set_link( lccrt_v_ptr var, lccrt_link_t li);
+extern const char *lccrt_var_get_section( lccrt_v_ptr v);
 extern lccrt_link_t lccrt_var_get_link( lccrt_v_ptr var);
 extern int lccrt_var_get_attr_common( lccrt_v_ptr var);
-extern int lccrt_var_set_attr_common( lccrt_v_ptr var, int value);
 extern int lccrt_var_get_attr_used( lccrt_v_ptr var);
-extern int lccrt_var_set_attr_used( lccrt_v_ptr var, int value);
-extern lccrt_m_ptr lccrt_var_get_module( lccrt_v_ptr var);
-extern lccrt_t_ptr lccrt_var_get_type( lccrt_v_ptr var);
-extern lccrt_vi_ptr lccrt_var_get_init_value( lccrt_v_ptr var);
 extern const char *lccrt_var_get_name( lccrt_v_ptr var);
 extern const char *lccrt_var_get_asm_name( lccrt_v_ptr var);
 extern lccrt_link_t lccrt_var_get_link( lccrt_v_ptr var);
 extern unsigned lccrt_var_get_align( lccrt_v_ptr var);
 extern lccrt_var_loc_t lccrt_var_get_loc( lccrt_v_ptr var);
+
+extern void lccrt_var_set_comdat( lccrt_v_ptr var, const char *comdat);
+extern void lccrt_var_set_section( lccrt_v_ptr v, const char *section_name);
+extern lccrt_link_t lccrt_var_set_link( lccrt_v_ptr var, lccrt_link_t li);
+extern int lccrt_var_set_attr_common( lccrt_v_ptr var, int value);
+extern int lccrt_var_set_attr_used( lccrt_v_ptr var, int value);
+
+extern lccrt_m_ptr lccrt_var_get_module( lccrt_v_ptr var);
+extern lccrt_t_ptr lccrt_var_get_type( lccrt_v_ptr var);
+extern uint64_t lccrt_var_get_bytesize( lccrt_v_ptr var);
+extern lccrt_vi_ptr lccrt_var_get_init_value( lccrt_v_ptr var);
 extern lccrt_v_ptr lccrt_var_get_next_var( lccrt_v_ptr var);
 extern uint64_t lccrt_var_get_constarg_hex64( lccrt_v_ptr v);
 extern int64_t lccrt_var_get_constarg_int64( lccrt_v_ptr v);
 extern const char *lccrt_var_get_constarg_str( lccrt_v_ptr v);
 extern lccrt_f_ptr lccrt_var_get_constarg_func( lccrt_v_ptr v);
+extern lccrt_t_ptr lccrt_var_expand_array( lccrt_v_ptr var, lccrt_t_ptr type);
+extern void lccrt_var_set_init_value( lccrt_v_ptr v, lccrt_vi_ptr iv);
+extern void lccrt_var_set_init_value_reduce( lccrt_v_ptr v, lccrt_vi_ptr iv);
+
 extern int lccrt_var_is_local( lccrt_v_ptr v);
 extern int lccrt_var_is_global( lccrt_v_ptr v);
 extern int lccrt_var_is_const( lccrt_var_ptr var);
@@ -734,10 +754,6 @@ extern int lccrt_var_is_constarg_hex( lccrt_v_ptr v);
 extern int lccrt_var_is_constarg_int( lccrt_v_ptr v);
 extern int lccrt_var_is_constarg_addr_var( lccrt_v_ptr v);
 extern int lccrt_var_is_constarg_addr_func( lccrt_v_ptr v);
-extern void lccrt_var_set_init_value( lccrt_v_ptr v, lccrt_vi_ptr iv);
-extern void lccrt_var_set_init_value_reduce( lccrt_v_ptr v, lccrt_vi_ptr iv);
-extern void lccrt_var_set_section( lccrt_v_ptr v, const char *section_name);
-extern const char *lccrt_var_get_section( lccrt_v_ptr v);
 
 extern lccrt_vi_ptr lccrt_varinit_new_zero( lccrt_t_ptr type);
 extern lccrt_vi_ptr lccrt_varinit_new_scalar( lccrt_t_ptr type, uint64_t value);
@@ -942,10 +958,8 @@ extern lccrt_o_ptr lccrt_oper_new_elemwrite( lccrt_f_ptr func, int num_args,
                                              lccrt_v_ptr *args, lccrt_oi_ptr iter);
 extern lccrt_o_ptr lccrt_oper_new_shuffle( lccrt_f_ptr func, lccrt_v_ptr pa, lccrt_v_ptr pb,
                                            lccrt_v_ptr pm, lccrt_v_ptr pr, lccrt_oi_ptr iter);
-extern void lccrt_oper_set_metadata( lccrt_o_ptr oper, lccrt_mmd_ptr meta, uintptr_t value);
-extern void lccrt_oper_unset_metadata( lccrt_o_ptr oper, lccrt_mmd_ptr meta);
-extern uintptr_t lccrt_oper_get_metadata_value( lccrt_o_ptr oper, lccrt_mmd_ptr meta);
-extern int lccrt_oper_has_metadata( lccrt_o_ptr oper, lccrt_mmd_ptr meta);
+extern void lccrt_oper_set_metadata( lccrt_o_ptr oper, intptr_t meta, lccrt_md_ptr value);
+extern lccrt_md_ptr lccrt_oper_get_metadata( lccrt_o_ptr oper, intptr_t meta);
 
 extern lccrt_fs_ptr lccrt_fs_new_file( lccrt_ctx_ptr ctx, FILE *file);
 extern lccrt_fs_ptr lccrt_fs_open_file( lccrt_ctx_ptr ctx, const char *name, int is_load);

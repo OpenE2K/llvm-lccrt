@@ -164,7 +164,7 @@ class PointerUnion
     : public pointer_union_detail::PointerUnionMembers<
           PointerUnion<PTs...>,
           PointerIntPair<
-              void *, pointer_union_detail::bitsRequired(sizeof...(PTs)), int,
+              void *, (unsigned int) pointer_union_detail::bitsRequired(sizeof...(PTs)), int,
               pointer_union_detail::PointerUnionUIntTraits<PTs...>>,
           0, PTs...> {
   // The first type is special in some ways, but we don't want PointerUnion to
